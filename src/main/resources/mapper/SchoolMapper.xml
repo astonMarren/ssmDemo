@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- mapper:根标签，namespace：命名空间，随便写，一般保证命名空间唯一 -->
+<mapper namespace="com.jshx.dao2.SchoolDao">
+<!-- 	<resultMap type="com.jshx.entity.School" id="schoolMap">
+		<id property="id" column="id"/>
+		<result property="name" column="name"/>
+		<result property="area" column="area"/>
+	</resultMap> -->
+<!--     <select id="selectAllStudent" resultType="student">
+        select * from student;
+    </select> -->
+    
+    <select id="getSchoolListByMap" resultType="list" parameterType="map">
+        select * from school s
+        where 1=1
+        <if test="sid != null">
+        	and s.id = #{sid}
+        </if>
+    </select>
+
+    <!--插入数据-->
+	<insert id="insertSchool" parameterType="com.jshx.entity.School">
+		insert into school(id,name,area) values(#{id},#{name},#{area})
+	</insert>
+<!--     <delete id="deleteUser">
+        delete from tb_user where id=#{id}
+    </delete>  -->
+</mapper>
+

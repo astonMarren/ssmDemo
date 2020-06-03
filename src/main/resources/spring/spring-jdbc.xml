@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+		 http://www.springframework.org/schema/beans/spring-beans.xsd
+		 http://www.springframework.org/schema/context
+		 http://www.springframework.org/schema/context/spring-context.xsd
+		  http://www.springframework.org/schema/aop
+          http://www.springframework.org/schema/aop/spring-aop.xsd">
+		 
+ 
+    <!--  读取 jdbc.properties 中的内容    property-placeholder: 占位符       location： 属性文件的位置    -->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+ 
+    <!--  获得数据库连接池对象，并交由 spring 同一管理 -->
+    <!-- 读写分离 -->
+    <bean id="dataSourceWrite" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <!-- 连接数据库的驱动，连接字符串，用户名和登录密码-->
+        <property name="driverClassName" value="${jdbc.drivername}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <!-- 数据池中最大连接数和最小连接数-->
+        <property name="maxActive" value="${jdbc.max}"/>
+        <property name="minIdle" value="${jdbc.min}"/>
+    </bean>
+    
+    <bean id="dataSourceRead" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <!-- 连接数据库的驱动，连接字符串，用户名和登录密码-->
+        <property name="driverClassName" value="${jdbc.drivername}"/>
+        <property name="url" value="${jdbc.url2}"/>
+        <property name="username" value="${jdbc.username2}"/>
+        <property name="password" value="${jdbc.password2}"/>
+        <!-- 数据池中最大连接数和最小连接数-->
+        <property name="maxActive" value="${jdbc.max2}"/>
+        <property name="minIdle" value="${jdbc.min2}"/>
+    </bean>
+ 
+     <bean id="dataSource" class="com.jshx.jdbc.DynamicDataSource">
+        <property name="targetDataSources">
+            <map key-type="java.lang.String">
+                <entry key="dataSourceWrite" value-ref="dataSourceWrite"/>
+                <entry key="dataSourceRead" value-ref="dataSourceRead"/>
+            </map>
+        </property>
+       <!-- 默认数据源 --> 
+        <property name="defaultTargetDataSource" ref="dataSourceWrite"/>
+    </bean>
+ 
+    <!--  获取 SqlSessionFactory 对象，并交由 spring 管理-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 注入连接池   给 sqlsessionFactory 的属性 dataSource 赋值      ref="引用该 spring容器 中的另一个 bean的id" -->
+        <property name="dataSource" ref="dataSource"/>
+		<!-- 配置MyBaties全局配置文件:mybatis-config.xml -->
+		<property name="configLocation" value="classpath:mybatis-config.xml" />
+		<!-- 扫描sql配置文件:mapper需要的xml文件,一般可以配置在mybatis-config.xml文件mappers标签中，直接引用mybatis-config.xml文件即可
+		<property name="mapperLocations" value="classpath:mapper/*.xml" /> -->
+
+    </bean>
+ 
+    <!--  获取 SqlSession 对象，并交由 spring 管理  用SqlSessionTemplate得到的SqlSession可以不用我们自己操心事务的管理，以及关闭操作-->
+    <bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+        <!-- 给 SqlSessionTemplate 的构造函数赋值-->
+        <constructor-arg index="0" ref="sqlSessionFactory" />
+    </bean>
+    
+    <bean id="dataSourceExchange" class="com.jshx.jdbc.DataSourceExchange"/>
+    
+    <!--配置切面拦截方法 -->
+    <aop:config proxy-target-class="false">
+        <!--所有数据库操作的方法加入切面-->
+        <aop:aspect ref="dataSourceExchange">
+            <aop:pointcut id="dataSourcePointcut" expression="execution(* com.jshx.service.*.*(..))"/>
+            <aop:before pointcut-ref="dataSourcePointcut" method="before"/>
+            <aop:after pointcut-ref="dataSourcePointcut" method="after"/>
+        </aop:aspect>
+    </aop:config>
+    
+</beans>
+
